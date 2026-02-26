@@ -1,6 +1,6 @@
 // Service Worker voor Slaapdagboek PWA
 // Versie verhogen bij elke nieuwe release om cache te verversen
-const CACHE_NAAM = 'slaapdagboek-v1';
+const CACHE_NAAM = 'slaapdagboek-v3';
 
 // Bestanden die offline beschikbaar moeten zijn
 const TE_CACHEN = [
