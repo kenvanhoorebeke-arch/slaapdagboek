@@ -1571,11 +1571,15 @@ function bouwMappingUI() {
 
   // Auto-detect: zoek naar vergelijkbare kolomnamen
   function autoMatch(veldKey, veldLabel) {
-    const zoek = [veldKey, veldLabel, ...aliassen(veldKey)]
-      .map(s => s.toLowerCase().replace(/[^a-z0-9]/g,''));
-    for (const h of csvHeaders) {
-      const hn = h.toLowerCase().replace(/[^a-z0-9]/g,'');
-      if (zoek.some(z => hn.includes(z) || z.includes(hn))) return h;
+    const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const kolomNorm = csvHeaders.map(h => normalize(h));
+    const zoekTerms = [veldKey, veldLabel, ...aliassen(veldKey)].map(normalize);
+
+    for (let i = 0; i < csvHeaders.length; i++) {
+      const hn = kolomNorm[i];
+      if (zoekTerms.some(z => z === hn || hn.startsWith(z) || z.startsWith(hn))) {
+        return csvHeaders[i];
+      }
     }
     return '';
   }
@@ -1595,13 +1599,13 @@ function bouwMappingUI() {
 function aliassen(key) {
   const a = {
     datum:       ['date','dag','nacht','datum'],
-    naarBed:     ['naar bed','bedtijd','naar_bed','sleep time','bedtime'],
+    naarBed:     ['naar bed','naar_bed','naarbeds','bedtijd','sleep time','bedtime','naar bed'],
     ingeslagen:  ['ingeslapen','ingeslagen','inslaaptijd','slaap','sleep onset'],
     ontwaakt:    ['ontwaakt','wakker','woke','wake time'],
     opgestaan:   ['opgestaan','opstaan','got up','rise'],
     wakkerKeer:  ['keer wakker','aantal','awakenings','times awake'],
-    wakkerMin:   ['min wakker','minuten wakker','wake minutes','waso'],
-    kwaliteit:   ['kwaliteit','quality','score'],
+    wakkerMin:   ['min wakker','minuten wakker','wake minutes','waso','min. wakker'],
+    kwaliteit:   ['kwaliteit','quality','score','kwaliteit (1-3)'],
     opmerkingen: ['opmerkingen','notes','notities','comments'],
   };
   return a[key] || [];
