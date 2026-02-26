@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Slaapdagboek</title>
+
+<!-- ═══ PWA ══════════════════════════════════════════════════════ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f80e1">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- iOS specifiek -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Slaapdagboek">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+<link rel="apple-touch-icon" sizes="76x76"  href="icon-76.png">
+
+<!-- Splash screen kleur iOS -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Lora:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ────────────────────────────────────────────────────── */
+:root {
+  --bg:       #f0f4ff;
+  --bg2:      #e8edf8;
+  --surface:  #ffffff;
+  --border:   #d6dff5;
+  --border2:  #c4cfe8;
+
+  --sky:      #4f80e1;
+  --sky-lt:   #7ba3f0;
+  --sky-pale: #dce8ff;
+  --teal:     #38b2ac;
+  --teal-lt:  #b2f0ed;
+  --amber:    #f6ad55;
+  --amber-lt: #feebc8;
+  --rose:     #f56565;
+  --rose-lt:  #fed7d7;
+  --mint:     #48bb78;
+  --mint-lt:  #c6f6d5;
+  --purple:   #805ad5;
+  --purple-lt:#e9d8fd;
+
+  --text:     #2d3a5c;
+  --muted:    #8896b8;
+  --card-sh:  0 2px 16px rgba(79,128,225,0.10);
+  --radius:   18px;
+  --radius-sm:12px;
+}
+
+/* ─── RESET ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: 32px;
+}
+
+/* ─── HEADER ────────────────────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, #4f80e1 0%, #7ba3f0 50%, #38b2ac 100%);
+  padding: 36px 20px 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.header-icon {
+  font-size: 44px;
+  display: block;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  position: relative;
+}
+header h1 {
+  font-family: 'Lora', serif;
+  font-size: 28px;
+  color: #fff;
+  letter-spacing: 0.01em;
+  position: relative;
+}
+header p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.80);
+  margin-top: 4px;
+  font-style: italic;
+  position: relative;
+}
+
+/* ─── TAB BAR ───────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  margin: 18px 14px 0;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 5px;
+  box-shadow: var(--card-sh);
+  gap: 4px;
+}
+.tab {
+  flex: 1;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.22s cubic-bezier(.4,0,.2,1);
+  user-select: none;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+.tab .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+.tab.active {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-lt) 100%);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(79,128,225,0.30);
+}
+
+/* ─── VIEWS ─────────────────────────────────────────────────────── */
+.view { display: none; padding: 14px; animation: fadeIn .2s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ─── CARD ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-sh);
+}
+.card-title {
+  font-family: 'Lora', serif;
+  font-size: 14px;
+  color: var(--sky);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+}
+
+/* ─── FORM ELEMENTS ─────────────────────────────────────────────── */
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+input[type="date"],
+input[type="time"],
+input[type="number"],
+textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 11px 13px;
+  outline: none;
+  transition: border-color 0.18s, background 0.18s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, textarea:focus { border-color: var(--sky); background: #fff; }
+textarea { resize: none; height: 78px; line-height: 1.5; font-weight: 400; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ─── QUALITY PICKER ────────────────────────────────────────────── */
+.quality-grid {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+.q-btn {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+  user-select: none;
+}
+.q-btn.active {
+  border-color: var(--sky);
+  background: var(--sky-pale);
+  transform: scale(1.10);
+  box-shadow: 0 4px 12px rgba(79,128,225,0.20);
+}
+.q-label { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; font-weight: 600; }
+
+/* ─── NETTO RESULT ──────────────────────────────────────────────── */
+.result-box {
+  background: linear-gradient(135deg, var(--sky-pale) 0%, var(--teal-lt) 100%);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.result-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
+.result-value { font-family: 'Lora', serif; font-size: 28px; color: var(--teal); font-weight: 500; }
+.result-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ─── BUTTONS ───────────────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-lt) 100%);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 18px rgba(79,128,225,0.30);
+  transition: transform 0.14s, box-shadow 0.14s;
+  margin-top: 4px;
+}
+.btn-primary:active { transform: scale(0.97); box-shadow: none; }
+.btn-primary.edit-mode {
+  background: linear-gradient(135deg, var(--teal) 0%, #4fd1c7 100%);
+  box-shadow: 0 4px 18px rgba(56,178,172,0.30);
+}
+.btn-cancel {
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.14s;
+}
+.btn-cancel:active { background: var(--bg2); }
+
+/* ─── FORM MODE BANNER ──────────────────────────────────────────── */
+.edit-banner {
+  display: none;
+  background: linear-gradient(135deg, var(--amber-lt), #fff);
+  border: 1.5px solid var(--amber);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #744210;
+  margin-bottom: 12px;
+  gap: 8px;
+  align-items: center;
+}
+.edit-banner.visible { display: flex; }
+
+/* ─── LOG ENTRIES ───────────────────────────────────────────────── */
+.log-empty {
+  text-align: center;
+  padding: 56px 20px;
+  color: var(--muted);
+}
+.log-empty .icon { font-size: 44px; margin-bottom: 14px; opacity: 0.45; display: block; }
+.log-empty p { font-size: 14px; line-height: 1.6; }
+
+.log-entry {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-sh);
+  transition: border-color 0.2s;
+}
+.log-entry:hover { border-color: var(--sky-lt); }
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.log-date {
+  font-family: 'Lora', serif;
+  font-size: 15px;
+  color: var(--text);
+  font-style: italic;
+}
+.log-weekday { font-size: 11px; color: var(--muted); font-style: normal; font-family: 'Nunito', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.log-actions { display: flex; gap: 6px; }
+.btn-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  color: var(--muted);
+}
+.btn-icon.edit:hover { border-color: var(--sky); color: var(--sky); background: var(--sky-pale); }
+.btn-icon.del:hover { border-color: var(--rose); color: var(--rose); background: var(--rose-lt); }
+
+.log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.chip {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  min-width: 72px;
+}
+.chip-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+.chip-value { font-size: 14px; font-weight: 700; margin-top: 2px; color: var(--text); }
+
+.log-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1.5px solid var(--bg2);
+}
+.netto-badge {
+  background: linear-gradient(135deg, var(--sky-pale), var(--teal-lt));
+  border: 1px solid var(--border);
+  color: var(--teal);
+  border-radius: 10px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.quality-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.log-notes {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+  font-style: italic;
+  line-height: 1.5;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* ─── INSIGHTS ──────────────────────────────────────────────────── */
+.insight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 14px;
+  box-shadow: var(--card-sh);
+  text-align: center;
+}
+.stat-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+.stat-value {
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  display: block;
+}
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; margin-top: 3px; display: block; }
+
+.chart-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-sh);
+}
+.chart-title { font-family: 'Lora', serif; font-size: 14px; color: var(--sky); margin-bottom: 14px; font-style: italic; }
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bar-date { font-size: 10px; color: var(--muted); font-weight: 700; width: 52px; flex-shrink: 0; }
+.bar-track {
+  flex: 1;
+  background: var(--bg2);
+  border-radius: 99px;
+  height: 18px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sky) 0%, var(--teal) 100%);
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+.bar-fill.poor { background: linear-gradient(90deg, var(--rose) 0%, var(--amber) 100%); }
+.bar-fill.ok { background: linear-gradient(90deg, var(--amber) 0%, #f6d365 100%); }
+.bar-val { font-size: 11px; font-weight: 700; color: var(--text); width: 36px; text-align: right; flex-shrink: 0; }
+
+.quality-dist {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 80px;
+  padding: 0 4px;
+}
+.q-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.q-bar-inner { width: 100%; border-radius: 6px 6px 0 0; min-height: 4px; transition: height 0.4s; }
+.q-bar-emoji { font-size: 16px; }
+.q-bar-count { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+.insight-tip {
+  background: linear-gradient(135deg, var(--purple-lt), var(--sky-pale));
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-sh);
+}
+.tip-title { font-size: 12px; color: var(--purple); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.tip-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+
+.no-insights {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.no-insights .icon { font-size: 40px; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+/* ─── TOAST ─────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(90px);
+  background: var(--mint);
+  color: #1a3a28;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-weight: 800;
+  font-size: 14px;
+  transition: transform 0.32s cubic-bezier(.22,1,.36,1);
+  z-index: 999;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(72,187,120,0.35);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ─── MODAL OVERLAY ─────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(45,58,92,0.40);
+  z-index: 100;
+  backdrop-filter: blur(2px);
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%;
+  max-height: 92dvh;
+  overflow-y: auto;
+  animation: slideUp 0.3s cubic-bezier(.22,1,.36,1);
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border2);
+  border-radius: 99px;
+  margin: 0 auto 18px;
+}
+.modal-title { font-family: 'Lora', serif; font-size: 18px; color: var(--text); margin-bottom: 16px; text-align: center; font-style: italic; }
+
+/* hide spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type="number"] { -moz-appearance: textfield; }
+
+/* ─── EXPORT BUTTON ─────────────────────────────────────────────── */
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--mint);
+  background: var(--mint-lt);
+  color: #276749;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-export:active { transform: scale(0.97); }
+
+
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════ -->
+<header>
+  <span class="header-icon">☁️</span>
+  <h1>Slaapdagboek</h1>
+  <p>Jouw persoonlijk slaaplogboek</p>
+</header>
+
+<!-- ═══ TABS ══════════════════════════════════════════════════════ -->
+<div class="tabs">
+  <div class="tab active" id="tab-form" onclick="switchTab('form')">
+    <span class="tab-icon">✏️</span>Invullen
+  </div>
+  <div class="tab" id="tab-log" onclick="switchTab('log')">
+    <span class="tab-icon">📋</span>Logboek
+  </div>
+  <div class="tab" id="tab-insights" onclick="switchTab('insights')">
+    <span class="tab-icon">📊</span>Inzichten
+  </div></div>
+
+<!-- ═══ FORM VIEW ═════════════════════════════════════════════════ -->
+<div class="view active" id="view-form">
+
+  <div class="edit-banner" id="edit-banner">
+    ✏️ <span>Wijzig modus — je past een bestaande nacht aan</span>
+  </div>
+
+  <!-- Datum -->
+  <div class="card">
+    <div class="card-title">🗓️ Datum</div>
+    <div class="field">
+      <label>Datum van de nacht</label>
+      <input type="date" id="datum">
+    </div>
+  </div>
+
+  <!-- Tijden -->
+  <div class="card">
+    <div class="card-title">⏰ Tijdstippen</div>
+    <div class="row-2">
+      <div class="field">
+        <label>Naar bed</label>
+        <input type="time" id="naar-bed">
+      </div>
+      <div class="field">
+        <label>Ingeslagen</label>
+        <input type="time" id="ingeslagen">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Ontwaakt</label>
+        <input type="time" id="ontwaakt">
+      </div>
+      <div class="field">
+        <label>Opgestaan</label>
+        <input type="time" id="opgestaan">
+      </div>
+    </div>
+  </div>
+
+  <!-- Onderbrekingen -->
+  <div class="card">
+    <div class="card-title">🌙 Onderbrekingen</div>
+    <div class="row-2">
+      <div class="field">
+        <label>Keer wakker</label>
+        <input type="number" id="wakker-keer" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Min. wakker gelegen</label>
+        <input type="number" id="wakker-min" min="0" placeholder="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- Netto slaaptijd -->
+  <div class="card">
+    <div class="card-title">📊 Netto slaaptijd</div>
+    <div class="result-box">
+      <div>
+        <div class="result-label">Berekend resultaat</div>
+        <div class="result-sub" id="result-detail">Vul tijdstippen in</div>
+      </div>
+      <div class="result-value" id="result-netto">—</div>
+    </div>
+  </div>
+
+  <!-- Kwaliteit -->
+  <div class="card">
+    <div class="card-title">⭐ Slaapkwaliteit</div>
+    <div class="quality-grid">
+      <button class="q-btn" data-v="1" onclick="setKwaliteit(1)">😴</button>
+      <button class="q-btn" data-v="2" onclick="setKwaliteit(2)">😐</button>
+      <button class="q-btn" data-v="3" onclick="setKwaliteit(3)">😄</button>
+    </div>
+    <div class="q-label" id="q-label">Selecteer een score</div>
+  </div>
+
+  <!-- Opmerkingen -->
+  <div class="card">
+    <div class="card-title">📝 Opmerkingen</div>
+    <div class="field">
+      <textarea id="opmerkingen" placeholder="Dromen, stress, medicatie, alcohol, cafeïne…"></textarea>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btn-save" onclick="slaOp()">💾 Opslaan in dagboek</button>
+  <button class="btn-cancel" id="btn-cancel" style="display:none;" onclick="annuleerEdit()">Annuleren</button>
+
+</div>
+
+<!-- ═══ LOG VIEW ══════════════════════════════════════════════════ -->
+<div class="view" id="view-log">
+  <div id="log-toolbar" style="display:none; justify-content:flex-end; margin-bottom:10px;">
+    <button class="btn-export" onclick="exporteerExcel()">📥 Exporteer naar Excel</button>
+  </div>
+  <div id="log-container"></div>
+</div>
+
+<!-- ═══ INSIGHTS VIEW ════════════════════════════════════════════ -->
+<div class="view" id="view-insights">
+  <div id="insights-container"></div>
+</div>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════ -->
+<div class="toast" id="toast">✓ Opgeslagen!</div>
+
+<!-- ═══ SCRIPT ═══════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── STATE ─────────────────────────────────────────────────────────
+const STORAGE_KEY = 'slaapdagboek_v2';
+let kwaliteitWaarde = 0;
+let editId = null; // null = nieuw, number = bewerken
+
+const KWALITEIT_LABELS = ['', 'Slecht', 'Matig', 'Goed'];
+const KWALITEIT_KLEUREN = ['', '#f56565', '#f6ad55', '#48bb78'];
+const WEEKDAGEN = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+const MAANDEN  = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function getLog() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveLog(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function toMinuten(tijdStr) {
+  if (!tijdStr) return null;
+  const [h, m] = tijdStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minNaarHM(min) {
+  if (min == null || isNaN(min)) return '—';
+  if (min < 0) min = 0;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}u${String(m).padStart(2,'0')}`;
+}
+
+function berekenNetto(ingeslagenStr, ontwaaktStr, wakkerMin) {
+  const ingeslagen = toMinuten(ingeslagenStr);
+  const ontwaakt   = toMinuten(ontwaaktStr);
+  if (ingeslagen === null || ontwaakt === null) return null;
+  let bruto = ontwaakt - ingeslagen;
+  if (bruto < 0) bruto += 24 * 60;
+  return Math.max(0, bruto - (wakkerMin || 0));
+}
+
+function formatDatum(datumStr) {
+  // datumStr is "YYYY-MM-DD" - parse without timezone offset
+  const [y, m, d] = datumStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return {
+    dag: WEEKDAGEN[dt.getDay()],
+    full: `${d} ${MAANDEN[m-1]} ${y}`
+  };
+}
+
+function todayString() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────
+function switchTab(t) {
+  ['form','log','insights'].forEach(v => {
+    document.getElementById('view-' + v).classList.toggle('active', v === t);
+    document.getElementById('tab-' + v).classList.toggle('active', v === t);
+  });
+  if (t === 'log')      renderLog();
+  if (t === 'insights') renderInzichten();
+}
+
+// ── KWALITEIT ─────────────────────────────────────────────────────
+function setKwaliteit(v) {
+  kwaliteitWaarde = v;
+  document.querySelectorAll('.q-btn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.v) === v);
+  });
+  document.getElementById('q-label').textContent = KWALITEIT_LABELS[v];
+}
+
+function resetKwaliteit() {
+  kwaliteitWaarde = 0;
+  document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('q-label').textContent = 'Selecteer een score';
+}
+
+// ── BEREKENING ────────────────────────────────────────────────────
+function updateBerekening() {
+  const ingeslagen = document.getElementById('ingeslagen').value;
+  const ontwaakt   = document.getElementById('ontwaakt').value;
+  const wakkerMin  = parseInt(document.getElementById('wakker-min').value) || 0;
+  const netto      = berekenNetto(ingeslagen, ontwaakt, wakkerMin);
+
+  if (netto === null) {
+    document.getElementById('result-netto').textContent = '—';
+    document.getElementById('result-detail').textContent = 'Vul tijdstippen in';
+    return null;
+  }
+
+  const brutMin = toMinuten(ontwaakt) - toMinuten(ingeslagen) + (toMinuten(ontwaakt) < toMinuten(ingeslagen) ? 24*60 : 0);
+  document.getElementById('result-netto').textContent = minNaarHM(netto);
+  document.getElementById('result-detail').textContent = `Bruto: ${minNaarHM(brutMin)} − ${wakkerMin} min wakker`;
+  return netto;
+}
+
+// Auto-update on input change
+['ingeslagen','ontwaakt','wakker-min'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateBerekening);
+  document.getElementById(id).addEventListener('change', updateBerekening);
+});
+
+// ── OPSLAAN / BEWERKEN ────────────────────────────────────────────
+function slaOp() {
+  const datum    = document.getElementById('datum').value;
+  const naarBed  = document.getElementById('naar-bed').value;
+  const ingeslagen = document.getElementById('ingeslagen').value;
+  const ontwaakt = document.getElementById('ontwaakt').value;
+  const opgestaan = document.getElementById('opgestaan').value;
+  const wakkerKeer = parseInt(document.getElementById('wakker-keer').value) || 0;
+  const wakkerMin  = parseInt(document.getElementById('wakker-min').value) || 0;
+  const opmerkingen = document.getElementById('opmerkingen').value.trim();
+
+  if (!datum || !ingeslagen || !ontwaakt) {
+    alert('Vul minstens de datum, het tijdstip van inslapen en het tijdstip van ontwaken in.');
+    return;
+  }
+
+  const nettoMin = berekenNetto(ingeslagen, ontwaakt, wakkerMin);
+
+  const entry = {
+    id: editId !== null ? editId : Date.now(),
+    datum, naarBed, ingeslagen, ontwaakt, opgestaan,
+    wakkerKeer, wakkerMin, nettoMin,
+    kwaliteit: kwaliteitWaarde,
+    opmerkingen
+  };
+
+  let data = getLog();
+
+  if (editId !== null) {
+    const idx = data.findIndex(e => e.id === editId);
+    if (idx !== -1) data[idx] = entry;
+    else data.unshift(entry);
+  } else {
+    data.unshift(entry);
+  }
+
+  // Sort by datum desc
+  data.sort((a, b) => b.datum.localeCompare(a.datum));
+
+  saveLog(data);
+  showToast(editId !== null ? '✏️ Wijzigingen opgeslagen!' : '✓ Nacht opgeslagen!');
+  resetForm();
+}
+
+function laadInForm(entry) {
+  editId = entry.id;
+  document.getElementById('datum').value       = entry.datum;
+  document.getElementById('naar-bed').value    = entry.naarBed || '';
+  document.getElementById('ingeslagen').value  = entry.ingeslagen;
+  document.getElementById('ontwaakt').value    = entry.ontwaakt;
+  document.getElementById('opgestaan').value   = entry.opgestaan || '';
+  document.getElementById('wakker-keer').value = entry.wakkerKeer;
+  document.getElementById('wakker-min').value  = entry.wakkerMin;
+  document.getElementById('opmerkingen').value = entry.opmerkingen || '';
+
+  if (entry.kwaliteit) setKwaliteit(entry.kwaliteit);
+  else resetKwaliteit();
+
+  updateBerekening();
+
+  // UI aanpassen
+  document.getElementById('edit-banner').classList.add('visible');
+  const btnSave = document.getElementById('btn-save');
+  btnSave.textContent = '💾 Wijzigingen opslaan';
+  btnSave.classList.add('edit-mode');
+  document.getElementById('btn-cancel').style.display = 'block';
+
+  switchTab('form');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function annuleerEdit() {
+  resetForm();
+}
+
+function resetForm() {
+  editId = null;
+  ['naar-bed','ingeslagen','ontwaakt','opgestaan','opmerkingen'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('wakker-keer').value = '';
+  document.getElementById('wakker-min').value = '';
+  document.getElementById('datum').value = todayString();
+  resetKwaliteit();
+  document.getElementById('result-netto').textContent = '—';
+  document.getElementById('result-detail').textContent = 'Vul tijdstippen in';
+
+  document.getElementById('edit-banner').classList.remove('visible');
+  const btnSave = document.getElementById('btn-save');
+  btnSave.textContent = '💾 Opslaan in dagboek';
+  btnSave.classList.remove('edit-mode');
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+// ── LOG RENDER ────────────────────────────────────────────────────
+function renderLog() {
+  const data = getLog();
+  const container = document.getElementById('log-container');
+  const toolbar = document.getElementById('log-toolbar');
+
+  if (!data.length) {
+    toolbar.style.display = 'none';
+    container.innerHTML = `
+      <div class="log-empty">
+        <span class="icon">🌙</span>
+        <p>Nog geen nachten geregistreerd.<br>Vul je eerste nacht in via het ✏️ tabblad!</p>
+      </div>`;
+    return;
+  }
+
+  toolbar.style.display = 'flex';
+
+  container.innerHTML = data.map(e => {
+    const { dag, full } = formatDatum(e.datum);
+    const kLabel = e.kwaliteit ? KWALITEIT_LABELS[e.kwaliteit] : '';
+    const kEmoji = ['','😴','😐','😄'][e.kwaliteit] || '';
+
+    return `
+    <div class="log-entry" id="le-${e.id}">
+      <div class="log-header">
+        <div>
+          <div class="log-weekday">${dag}</div>
+          <div class="log-date">${full}</div>
+        </div>
+        <div class="log-actions">
+          <button class="btn-icon edit" onclick="editEntry(${e.id})" title="Bewerken">✏️</button>
+          <button class="btn-icon del"  onclick="deleteEntry(${e.id})" title="Verwijderen">🗑️</button>
+        </div>
+      </div>
+
+      <div class="log-chips">
+        <div class="chip">
+          <span class="chip-label">Naar bed</span>
+          <span class="chip-value">${e.naarBed || '—'}</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Ingeslagen</span>
+          <span class="chip-value">${e.ingeslagen}</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Ontwaakt</span>
+          <span class="chip-value">${e.ontwaakt}</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Opgestaan</span>
+          <span class="chip-value">${e.opgestaan || '—'}</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Keer wakker</span>
+          <span class="chip-value">${e.wakkerKeer}×</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Wakker</span>
+          <span class="chip-value">${e.wakkerMin} min</span>
+        </div>
+      </div>
+
+      <div class="log-footer">
+        <span class="netto-badge">🌙 ${minNaarHM(e.nettoMin)} netto slaap</span>
+        ${e.kwaliteit ? `<span class="quality-badge">${kEmoji} ${kLabel}</span>` : ''}
+      </div>
+
+      ${e.opmerkingen ? `<div class="log-notes">💬 ${escHtml(e.opmerkingen)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function editEntry(id) {
+  const entry = getLog().find(e => e.id === id);
+  if (entry) laadInForm(entry);
+}
+
+function deleteEntry(id) {
+  if (!confirm('Wil je deze nacht verwijderen?')) return;
+  const data = getLog().filter(e => e.id !== id);
+  saveLog(data);
+  renderLog();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INZICHTEN ─────────────────────────────────────────────────────
+function renderInzichten() {
+  const data = getLog();
+  const container = document.getElementById('insights-container');
+
+  if (data.length < 2) {
+    container.innerHTML = `
+      <div class="no-insights">
+        <span class="icon">📊</span>
+        Registreer minstens 2 nachten om inzichten te zien.<br><br>
+        Hoe meer nachten je bijhoudt, hoe beter de inzichten!
+      </div>`;
+    return;
+  }
+
+  // ── Berekeningen ──
+  const nettos   = data.filter(e => e.nettoMin != null).map(e => e.nettoMin);
+  const gemNetto = nettos.length ? Math.round(nettos.reduce((a,b) => a+b, 0) / nettos.length) : null;
+  const maxNetto = nettos.length ? Math.max(...nettos) : null;
+  const minNetto = nettos.length ? Math.min(...nettos) : null;
+
+  const kwaliteiten = data.filter(e => e.kwaliteit > 0).map(e => e.kwaliteit);
+  const gemKwaliteit = kwaliteiten.length
+    ? (kwaliteiten.reduce((a,b) => a+b, 0) / kwaliteiten.length).toFixed(1)
+    : null;
+
+  const totalWakker = data.reduce((s,e) => s + (Number(e.wakkerKeer)||0), 0);
+  const gemWakker   = (totalWakker / data.length).toFixed(1);
+
+  const totaalMin = data.reduce((s,e) => s + (Number(e.wakkerMin)||0), 0);
+  const gemWakkerMin = Math.round(totaalMin / data.length);
+
+  // Doelstelling: ≥ 7u netto = goed
+  const goedeSlaap = data.filter(e => e.nettoMin >= 420).length;
+  const pctGoed    = Math.round(goedeSlaap / data.length * 100);
+
+  // Consistentie inslaaptijden
+  const inslaaptijden = data.filter(e => e.ingeslagen).map(e => toMinuten(e.ingeslagen));
+  let consistentieScore = '—';
+  if (inslaaptijden.length >= 3) {
+    const gem = inslaaptijden.reduce((a,b) => a+b) / inslaaptijden.length;
+    const variantie = inslaaptijden.reduce((s,t) => s + Math.abs(t-gem), 0) / inslaaptijden.length;
+    consistentieScore = variantie < 20 ? '🟢 Goed' : variantie < 45 ? '🟡 Matig' : '🔴 Onregelmatig';
+  }
+
+  // Recente 7 dagen voor bar chart
+  const recent = data.slice(0, Math.min(7, data.length));
+
+  // Kwaliteitsverdeling
+  const kwalDist = [0,0,0,0]; // index 1-3
+  data.forEach(e => { if (e.kwaliteit >= 1 && e.kwaliteit <= 3) kwalDist[e.kwaliteit]++; });
+  const maxKwal = Math.max(...kwalDist.slice(1), 1);
+
+  // Beste dag / slechtste dag
+  const metNetto = data.filter(e => e.nettoMin != null);
+  const beste  = metNetto.length ? metNetto.reduce((a,b) => a.nettoMin > b.nettoMin ? a : b) : null;
+  const slechtste = metNetto.length ? metNetto.reduce((a,b) => a.nettoMin < b.nettoMin ? a : b) : null;
+
+  // Tip genereren
+  let tip = '';
+  if (gemNetto !== null && gemNetto < 360) {
+    tip = 'Je gemiddelde netto slaaptijd is minder dan 6 uur. Probeer eerder naar bed te gaan of je slaaphygiëne te verbeteren.';
+  } else if (variantieInslaap(inslaaptijden) > 45) {
+    tip = 'Je inslaaptijden zijn erg wisselvallig. Een vast slaapritme helpt je lichaam beter in te slapen.';
+  } else if (kwaliteiten.length && gemKwaliteit < 2) {
+    tip = 'Je slaapkwaliteit is gemiddeld laag. Overweeg het beperken van schermtijd en cafeïne voor het slapen gaan.';
+  } else if (gemNetto >= 420) {
+    tip = 'Proficiat! Je haalt gemiddeld voldoende netto slaap. Blijf je slaapritme bewaken.';
+  } else {
+    tip = 'Houd je dagboek zo consistent mogelijk bij voor de beste inzichten in je slaappatroon.';
+  }
+
+  // ── HTML Render ──
+  container.innerHTML = `
+
+    <div class="insight-grid">
+      <div class="stat-card">
+        <span class="stat-icon">⏱️</span>
+        <span class="stat-value">${minNaarHM(gemNetto)}</span>
+        <span class="stat-label">Gem. netto slaap</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">✨</span>
+        <span class="stat-value">${gemKwaliteit !== null ? gemKwaliteit + '/3' : '—'}</span>
+        <span class="stat-label">Gem. kwaliteit</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">😴</span>
+        <span class="stat-value">${gemWakker}×</span>
+        <span class="stat-label">Gem. keer wakker</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🎯</span>
+        <span class="stat-value">${pctGoed}%</span>
+        <span class="stat-label">Nachten ≥ 7u slaap</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📅</span>
+        <span class="stat-value">${data.length}</span>
+        <span class="stat-label">Nachten gelogd</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🔄</span>
+        <span class="stat-value" style="font-size:13px;font-family:'Nunito',sans-serif;margin-top:4px;">${consistentieScore}</span>
+        <span class="stat-label">Ritme inslaaptijd</span>
+      </div>
+    </div>
+
+    <!-- Bar chart netto slaap -->
+    <div class="chart-card">
+      <div class="chart-title">Netto slaaptijd — recente nachten</div>
+      ${recent.map(e => {
+        const { dag, full } = formatDatum(e.datum);
+        const pct = e.nettoMin != null ? Math.min(100, Math.round(e.nettoMin / 600 * 100)) : 0;
+        const cls = e.nettoMin < 360 ? 'poor' : e.nettoMin < 420 ? 'ok' : '';
+        return `
+        <div class="bar-row">
+          <div class="bar-date">${dag.slice(0,2)} ${e.datum.slice(8)}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${cls}" style="width:${pct}%"></div>
+          </div>
+          <div class="bar-val">${minNaarHM(e.nettoMin)}</div>
+        </div>`;
+      }).join('')}
+      <div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:right;">🟥 &lt;6u &nbsp; 🟧 6-7u &nbsp; 🟩 ≥7u</div>
+    </div>
+
+    <!-- Kwaliteitsverdeling -->
+    ${kwaliteiten.length >= 2 ? `
+    <div class="chart-card">
+      <div class="chart-title">Verdeling slaapkwaliteit</div>
+      <div class="quality-dist">
+        ${[1,2,3].map(v => {
+          const h = Math.round(kwalDist[v] / maxKwal * 60);
+          const kleuren = ['','#f56565','#f6ad55','#48bb78'];
+          return `
+          <div class="q-bar-wrap">
+            <div class="q-bar-count">${kwalDist[v]}</div>
+            <div class="q-bar-inner" style="height:${h}px;background:${kleuren[v]};"></div>
+            <div class="q-bar-emoji">${['','😴','😐','😄'][v]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Beste / slechtste nacht -->
+    ${beste ? `
+    <div class="chart-card">
+      <div class="chart-title">Uitschieters</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:11px;color:var(--mint);font-weight:800;text-transform:uppercase;letter-spacing:.08em;">Beste nacht 🏆</div>
+            <div style="font-size:14px;font-weight:700;margin-top:2px;">${formatDatum(beste.datum).full}</div>
+          </div>
+          <div style="font-size:18px;font-weight:800;color:var(--mint);">${minNaarHM(beste.nettoMin)}</div>
+        </div>
+        <div style="height:1px;background:var(--bg2);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:11px;color:var(--rose);font-weight:800;text-transform:uppercase;letter-spacing:.08em;">Kortste nacht 😓</div>
+            <div style="font-size:14px;font-weight:700;margin-top:2px;">${formatDatum(slechtste.datum).full}</div>
+          </div>
+          <div style="font-size:18px;font-weight:800;color:var(--rose);">${minNaarHM(slechtste.nettoMin)}</div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- Tip -->
+    <div class="insight-tip">
+      <div class="tip-title">💡 Persoonlijk advies</div>
+      <div class="tip-text">${tip}</div>
+    </div>
+  `;
+}
+
+// Helper voor tip
+function variantieInslaap(tijden) {
+  if (!tijden.length) return 0;
+  const gem = tijden.reduce((a,b) => a+b) / tijden.length;
+  return tijden.reduce((s,t) => s + Math.abs(t-gem), 0) / tijden.length;
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg || '✓ Opgeslagen!';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── EXCEL EXPORT ──────────────────────────────────────────────────
+function exporteerExcel() {
+  const data = getLog();
+  if (!data.length) { alert('Geen data om te exporteren.'); return; }
+
+  // Bouw CSV op met BOM voor correcte Excel-encoding (UTF-8)
+  const BOM = '\uFEFF';
+  const sep = ';'; // puntkomma werkt beter in Europese Excel
+
+  const headers = [
+    'Datum', 'Dag', 'Naar bed', 'Ingeslagen', 'Ontwaakt', 'Opgestaan',
+    'Keer wakker', 'Min. wakker', 'Netto slaap (min)', 'Netto slaap',
+    'Kwaliteit (1-3)', 'Kwaliteit label', 'Opmerkingen'
+  ];
+
+  const rows = data.map(e => {
+    const { dag, full } = formatDatum(e.datum);
+    const netto = e.nettoMin != null ? e.nettoMin : '';
+    const nettoHM = e.nettoMin != null ? minNaarHM(e.nettoMin) : '';
+    const kLabel = e.kwaliteit ? KWALITEIT_LABELS[e.kwaliteit] : '';
+    // Escape velden met komma's, puntkomma's of aanhalingstekens
+    const esc = v => {
+      const s = String(v ?? '');
+      return (s.includes(sep) || s.includes('"') || s.includes('\n'))
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s;
+    };
+    return [
+      e.datum, dag, e.naarBed, e.ingeslagen, e.ontwaakt, e.opgestaan,
+      e.wakkerKeer, e.wakkerMin, netto, nettoHM,
+      e.kwaliteit || '', kLabel, e.opmerkingen
+    ].map(esc).join(sep);
+  });
+
+  const csv = BOM + headers.join(sep) + '\r\n' + rows.join('\r\n');
+
+  // Download triggeren
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const vandaag = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `slaapdagboek_${vandaag}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`📥 ${data.length} nachten geëxporteerd!`);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.getElementById('datum').value = todayString();
+
+// ── SERVICE WORKER REGISTRATIE ────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('✓ Service worker actief'))
+      .catch(e => console.warn('Service worker fout:', e));
+  });
+}
+
+</script>
+</body>
+</html>

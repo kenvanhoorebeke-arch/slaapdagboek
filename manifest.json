@@ -1,0 +1,45 @@
+{
+  "name": "Slaapdagboek",
+  "short_name": "Slaap",
+  "description": "Jouw persoonlijk slaaplogboek",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1f3c",
+  "theme_color": "#4f80e1",
+  "orientation": "portrait",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "icon-76.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-120.png",
+      "sizes": "120x120",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
