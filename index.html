@@ -1663,27 +1663,27 @@ function bouwPreview() {
   const dupes  = importPreview.filter(r => r.status === 'dupe').length;
   const fouten = importPreview.filter(r => r.status === 'err').length;
   document.getElementById('imp-preview-info').textContent =
-    `${nieuw} nieuw · ${dupes} al aanwezig (worden overgeslagen) · ${fouten} onleesbaar`;
+    `${nieuw} nieuw · ${dupes} worden overschreven · ${fouten} onleesbaar`;
 
   document.getElementById('imp-preview-list').innerHTML = importPreview.map(r => `
     <div class="imp-row ${r.status}">
-      <span>${r.status === 'new' ? '✓' : r.status === 'dupe' ? '⚠️' : '✗'} ${r.label}</span>
+      <span>${r.status === 'new' ? '✓ Nieuw' : r.status === 'dupe' ? '↺ Overschrijven' : '✗ Fout'} — ${r.label}</span>
     </div>`).join('');
 }
 
 function bevestigImport() {
-  const nieuw = importPreview.filter(r => r.status === 'new').map(r => r.entry);
-  if (!nieuw.length) { alert('Geen nieuwe nachten om te importeren.'); return; }
+  const teImporteren = importPreview.filter(r => r.status === 'new' || r.status === 'dupe').map(r => r.entry);
+  if (!teImporteren.length) { alert('Geen nachten om te importeren.'); return; }
 
-  const bestaand = getLog();
-  const samengevoegd = [...bestaand, ...nieuw]
+  const bestaand = getLog().filter(e => !teImporteren.some(n => n.datum === e.datum));
+  const samengevoegd = [...bestaand, ...teImporteren]
     .sort((a,b) => b.datum.localeCompare(a.datum));
   saveLog(samengevoegd);
   updateHeaderCount();
 
   document.getElementById('import-modal').classList.remove('open');
   renderLog();
-  showToast(`✓ ${nieuw.length} nachten geïmporteerd!`);
+  showToast(`✓ ${teImporteren.length} nachten geïmporteerd!`);
 }
 
 // ── Datum/tijd normalisering ──────────────────────────────────────
