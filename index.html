@@ -603,7 +603,7 @@ input[type="number"] { -moz-appearance: textfield; }
         <input type="time" id="naar-bed">
       </div>
       <div class="field">
-        <label>Ingeslagen</label>
+        <label>Ingeslapen</label>
         <input type="time" id="ingeslagen">
       </div>
     </div>
@@ -934,7 +934,7 @@ function renderLog() {
           <span class="chip-value">${e.naarBed || '—'}</span>
         </div>
         <div class="chip">
-          <span class="chip-label">Ingeslagen</span>
+          <span class="chip-label">Ingeslapen</span>
           <span class="chip-value">${e.ingeslagen}</span>
         </div>
         <div class="chip">
@@ -1182,7 +1182,7 @@ function exporteerExcel() {
   const sep = ';'; // puntkomma werkt beter in Europese Excel
 
   const headers = [
-    'Datum', 'Dag', 'Naar bed', 'Ingeslagen', 'Ontwaakt', 'Opgestaan',
+    'Datum', 'Dag', 'Naar bed', 'Ingeslapen', 'Ontwaakt', 'Opgestaan',
     'Keer wakker', 'Min. wakker', 'Netto slaap (min)', 'Netto slaap',
     'Kwaliteit (1-3)', 'Kwaliteit label', 'Opmerkingen'
   ];
@@ -1225,6 +1225,52 @@ function exporteerExcel() {
 
 // ── INIT ──────────────────────────────────────────────────────────
 document.getElementById('datum').value = todayString();
+
+// ── PAPIEREN DAGBOEK DATA (eenmalige import) ──────────────────────
+(function importPapierenData() {
+  const IMPORT_KEY = 'papieren_import_v1';
+  if (localStorage.getItem(IMPORT_KEY)) return; // al gedaan
+
+  const papier = [
+    { datum:'2025-02-13', ingeslagen:'00:45', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:60,  kwaliteit:2 },
+    { datum:'2025-02-14', ingeslagen:'00:40', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:65,  kwaliteit:1 },
+    { datum:'2025-02-15', ingeslagen:'02:20', ontwaakt:'08:20', opgestaan:'08:20', wakkerKeer:2, wakkerMin:20,  kwaliteit:1 },
+    { datum:'2025-02-16', ingeslagen:'01:55', ontwaakt:'07:65', opgestaan:'07:65', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-17', ingeslagen:'02:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:40,  kwaliteit:2 },
+    { datum:'2025-02-18', ingeslagen:'00:30', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-19', ingeslagen:'02:20', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-20', ingeslagen:'01:25', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:35,  kwaliteit:2 },
+    { datum:'2025-02-21', ingeslagen:'02:45', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:45,  kwaliteit:1 },
+    { datum:'2025-02-22', ingeslagen:'00:00', ontwaakt:'07:50', opgestaan:'07:50', wakkerKeer:2, wakkerMin:30,  kwaliteit:2 },
+    { datum:'2025-02-23', ingeslagen:'08:05', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:15,  kwaliteit:2 },
+    { datum:'2025-02-24', ingeslagen:'04:00', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:17,  kwaliteit:1 },
+    { datum:'2025-02-25', ingeslagen:'23:35', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:23,  kwaliteit:2 },
+    { datum:'2025-02-26', ingeslagen:'00:55', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:3, wakkerMin:7,   kwaliteit:1 },
+  ];
+
+  const bestaand = getLog();
+  const bestaandeDatums = new Set(bestaand.map(e => e.datum));
+
+  const nieuw = papier
+    .filter(e => !bestaandeDatums.has(e.datum))
+    .map(e => ({
+      id: Date.now() + Math.floor(Math.random() * 999999),
+      naarBed: '',
+      opgestaan: e.opgestaan,
+      opmerkingen: '[Ingevoerd vanuit papieren dagboek]',
+      bron: 'papier',
+      nettoMin: berekenNetto(e.ingeslagen, e.ontwaakt, e.wakkerMin),
+      ...e
+    }));
+
+  if (nieuw.length) {
+    const samengevoegd = [...bestaand, ...nieuw]
+      .sort((a,b) => b.datum.localeCompare(a.datum));
+    saveLog(samengevoegd);
+  }
+
+  localStorage.setItem(IMPORT_KEY, '1');
+})();
 
 // ── SERVICE WORKER REGISTRATIE ────────────────────────────────────
 if ('serviceWorker' in navigator) {
