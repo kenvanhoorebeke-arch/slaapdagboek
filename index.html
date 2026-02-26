@@ -453,6 +453,9 @@ textarea { resize: none; height: 78px; line-height: 1.5; font-weight: 400; }
   height: 80px;
   padding: 0 4px;
 }
+.chip-highlight { background: var(--sky-pale); border-color: var(--sky); }
+.chip-highlight .chip-label { color: var(--sky); }
+.chip-highlight .chip-value { color: var(--sky); }
 .q-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
 .q-bar-inner { width: 100%; border-radius: 6px 6px 0 0; min-height: 4px; transition: height 0.4s; }
 .q-bar-emoji { font-size: 16px; }
@@ -733,6 +736,26 @@ function berekenNetto(ingeslagenStr, ontwaaktStr, wakkerMin) {
   return Math.max(0, bruto - (wakkerMin || 0));
 }
 
+function berekenTijdInBed(naarBedStr, opgestaanStr) {
+  const naarBed   = toMinuten(naarBedStr);
+  const opgestaan = toMinuten(opgestaanStr);
+  if (naarBed === null || opgestaan === null) return null;
+  let tib = opgestaan - naarBed;
+  if (tib < 0) tib += 24 * 60;
+  return tib;
+}
+
+function berekenSlaaplatentie(naarBedStr, ingeslagenStr) {
+  const naarBed    = toMinuten(naarBedStr);
+  const ingeslagen = toMinuten(ingeslagenStr);
+  if (naarBed === null || ingeslagen === null) return null;
+  let lat = ingeslagen - naarBed;
+  if (lat < 0) lat += 24 * 60;
+  // Onrealistische waarden (>4u) negeren
+  if (lat > 240) return null;
+  return lat;
+}
+
 function formatDatum(datumStr) {
   // datumStr is "YYYY-MM-DD" - parse without timezone offset
   const [y, m, d] = datumStr.split('-').map(Number);
@@ -775,25 +798,34 @@ function resetKwaliteit() {
 
 // ── BEREKENING ────────────────────────────────────────────────────
 function updateBerekening() {
+  const naarBed    = document.getElementById('naar-bed').value;
   const ingeslagen = document.getElementById('ingeslagen').value;
   const ontwaakt   = document.getElementById('ontwaakt').value;
+  const opgestaan  = document.getElementById('opgestaan').value;
   const wakkerMin  = parseInt(document.getElementById('wakker-min').value) || 0;
   const netto      = berekenNetto(ingeslagen, ontwaakt, wakkerMin);
+  const tib        = berekenTijdInBed(naarBed, opgestaan);
+  const lat        = berekenSlaaplatentie(naarBed, ingeslagen);
+  const rend       = (netto != null && tib > 0) ? Math.round(netto / tib * 100) : null;
 
   if (netto === null) {
-    document.getElementById('result-netto').textContent = '—';
+    document.getElementById('result-netto').textContent  = '—';
     document.getElementById('result-detail').textContent = 'Vul tijdstippen in';
     return null;
   }
 
   const brutMin = toMinuten(ontwaakt) - toMinuten(ingeslagen) + (toMinuten(ontwaakt) < toMinuten(ingeslagen) ? 24*60 : 0);
   document.getElementById('result-netto').textContent = minNaarHM(netto);
-  document.getElementById('result-detail').textContent = `Bruto: ${minNaarHM(brutMin)} − ${wakkerMin} min wakker`;
+  let detail = `Bruto: ${minNaarHM(brutMin)} − ${wakkerMin} min wakker`;
+  if (tib)  detail += ` · Tijd in bed: ${minNaarHM(tib)}`;
+  if (rend !== null) detail += ` · Rendement: ${rend}%`;
+  if (lat !== null) detail += ` · Inslaaptijd: ${lat} min`;
+  document.getElementById('result-detail').textContent = detail;
   return netto;
 }
 
 // Auto-update on input change
-['ingeslagen','ontwaakt','wakker-min'].forEach(id => {
+['naar-bed','ingeslagen','ontwaakt','opgestaan','wakker-min'].forEach(id => {
   document.getElementById(id).addEventListener('input', updateBerekening);
   document.getElementById(id).addEventListener('change', updateBerekening);
 });
@@ -814,12 +846,16 @@ function slaOp() {
     return;
   }
 
-  const nettoMin = berekenNetto(ingeslagen, ontwaakt, wakkerMin);
+  const nettoMin     = berekenNetto(ingeslagen, ontwaakt, wakkerMin);
+  const tijdInBedMin = berekenTijdInBed(naarBed, opgestaan);
+  const slaaplatentie = berekenSlaaplatentie(naarBed, ingeslagen);
+  const slaaprendement = (nettoMin != null && tijdInBedMin > 0)
+    ? Math.round(nettoMin / tijdInBedMin * 100) : null;
 
   const entry = {
     id: editId !== null ? editId : Date.now(),
     datum, naarBed, ingeslagen, ontwaakt, opgestaan,
-    wakkerKeer, wakkerMin, nettoMin,
+    wakkerKeer, wakkerMin, nettoMin, tijdInBedMin, slaaplatentie, slaaprendement,
     kwaliteit: kwaliteitWaarde,
     opmerkingen
   };
@@ -953,6 +989,18 @@ function renderLog() {
           <span class="chip-label">Wakker</span>
           <span class="chip-value">${e.wakkerMin} min</span>
         </div>
+        ${e.tijdInBedMin != null ? `<div class="chip">
+          <span class="chip-label">Tijd in bed</span>
+          <span class="chip-value">${minNaarHM(e.tijdInBedMin)}</span>
+        </div>` : ''}
+        ${e.slaaplatentie != null ? `<div class="chip">
+          <span class="chip-label">Inslaaptijd</span>
+          <span class="chip-value">${e.slaaplatentie} min</span>
+        </div>` : ''}
+        ${e.slaaprendement != null ? `<div class="chip chip-highlight">
+          <span class="chip-label">Rendement</span>
+          <span class="chip-value">${e.slaaprendement}%</span>
+        </div>` : ''}
       </div>
 
       <div class="log-footer">
@@ -1026,6 +1074,62 @@ function renderInzichten() {
     consistentieScore = variantie < 20 ? '🟢 Goed' : variantie < 45 ? '🟡 Matig' : '🔴 Onregelmatig';
   }
 
+  // ── Nieuwe klinische parameters ──
+
+  // Gem. tijd in bed
+  const tibWaarden = data.filter(e => e.tijdInBedMin != null).map(e => e.tijdInBedMin);
+  const gemTib = tibWaarden.length ? Math.round(tibWaarden.reduce((a,b) => a+b,0) / tibWaarden.length) : null;
+
+  // Gem. slaaprendement
+  const rendementen = data.filter(e => e.slaaprendement != null).map(e => e.slaaprendement);
+  const gemRendement = rendementen.length ? Math.round(rendementen.reduce((a,b) => a+b,0) / rendementen.length) : null;
+  const rendementLabel = gemRendement === null ? '—'
+    : gemRendement >= 85 ? `${gemRendement}% 🟢`
+    : gemRendement >= 75 ? `${gemRendement}% 🟡`
+    : `${gemRendement}% 🔴`;
+
+  // Slaaplatentie (gem. inslaaptijd)
+  const latentieWaarden = data.filter(e => e.slaaplatentie != null).map(e => e.slaaplatentie);
+  const gemLatentie = latentieWaarden.length ? Math.round(latentieWaarden.reduce((a,b) => a+b,0) / latentieWaarden.length) : null;
+  const latentieLabel = gemLatentie === null ? '—'
+    : gemLatentie <= 20 ? `${gemLatentie} min 🟢`
+    : gemLatentie <= 30 ? `${gemLatentie} min 🟡`
+    : `${gemLatentie} min 🔴`;
+
+  // Slaapfragmentatie-index = keer wakker per uur netto slaap
+  const fragData = data.filter(e => e.nettoMin > 0 && e.wakkerKeer != null);
+  const gemFrag = fragData.length
+    ? (fragData.reduce((s,e) => s + (e.wakkerKeer / (e.nettoMin/60)), 0) / fragData.length).toFixed(2)
+    : null;
+  const fragLabel = gemFrag === null ? '—'
+    : gemFrag <= 1 ? `${gemFrag}/u 🟢`
+    : gemFrag <= 2 ? `${gemFrag}/u 🟡`
+    : `${gemFrag}/u 🔴`;
+
+  // Vroegste ontwakingstijd (gemiddelde van ontwaakt)
+  const ontwaaktTijden = data.filter(e => e.ontwaakt).map(e => toMinuten(e.ontwaakt));
+  let gemOntwaakt = null;
+  if (ontwaaktTijden.length) {
+    // Tijden na middernacht (< 12u) corrigeren naar volgende dag
+    const gecorrigeerd = ontwaaktTijden.map(t => t < 720 ? t + 1440 : t);
+    gemOntwaakt = Math.round(gecorrigeerd.reduce((a,b) => a+b,0) / gecorrigeerd.length) % 1440;
+  }
+
+  // Circadiaanse verschuiving = gem. inslaaptijd t.o.v. 23u00 (norm)
+  const NORM_INSLAAP = 23 * 60; // 23:00
+  let circVerschuiving = null;
+  if (inslaaptijden.length >= 3) {
+    const gecorrigeerd = inslaaptijden.map(t => t < 720 ? t + 1440 : t);
+    const gemInslaap = Math.round(gecorrigeerd.reduce((a,b) => a+b,0) / gecorrigeerd.length) % 1440;
+    const verschil = gemInslaap - NORM_INSLAAP;
+    // toon als +Xmin (vertraagd) of -Xmin (vervroegd)
+    const absMin = Math.abs(verschil);
+    const richting = verschil > 0 ? 'vertraagd' : 'vervroegd';
+    circVerschuiving = absMin < 15 ? '🟢 Normaal'
+      : absMin < 60 ? `🟡 ${minNaarHM(absMin)} ${richting}`
+      : `🔴 ${minNaarHM(absMin)} ${richting}`;
+  }
+
   // Recente 7 dagen voor bar chart
   const recent = data.slice(0, Math.min(7, data.length));
 
@@ -1063,6 +1167,26 @@ function renderInzichten() {
         <span class="stat-label">Gem. netto slaap</span>
       </div>
       <div class="stat-card">
+        <span class="stat-icon">🛏️</span>
+        <span class="stat-value">${gemTib ? minNaarHM(gemTib) : '—'}</span>
+        <span class="stat-label">Gem. tijd in bed</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📈</span>
+        <span class="stat-value" style="font-size:13px;margin-top:4px;">${rendementLabel}</span>
+        <span class="stat-label">Slaaprendement</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">⌛</span>
+        <span class="stat-value" style="font-size:13px;margin-top:4px;">${latentieLabel}</span>
+        <span class="stat-label">Gem. inslaaptijd</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🔀</span>
+        <span class="stat-value" style="font-size:13px;margin-top:4px;">${fragLabel}</span>
+        <span class="stat-label">Fragmentatie-index</span>
+      </div>
+      <div class="stat-card">
         <span class="stat-icon">✨</span>
         <span class="stat-value">${gemKwaliteit !== null ? gemKwaliteit + '/3' : '—'}</span>
         <span class="stat-label">Gem. kwaliteit</span>
@@ -1084,8 +1208,18 @@ function renderInzichten() {
       </div>
       <div class="stat-card">
         <span class="stat-icon">🔄</span>
-        <span class="stat-value" style="font-size:13px;font-family:'Nunito',sans-serif;margin-top:4px;">${consistentieScore}</span>
+        <span class="stat-value" style="font-size:13px;margin-top:4px;">${consistentieScore}</span>
         <span class="stat-label">Ritme inslaaptijd</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🌅</span>
+        <span class="stat-value">${gemOntwaakt !== null ? minNaarHM(gemOntwaakt) : '—'}</span>
+        <span class="stat-label">Gem. ontwaaktijd</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🌀</span>
+        <span class="stat-value" style="font-size:11px;margin-top:4px;">${circVerschuiving || '—'}</span>
+        <span class="stat-label">Circadiaanse fase</span>
       </div>
     </div>
 
@@ -1183,25 +1317,35 @@ function exporteerExcel() {
 
   const headers = [
     'Datum', 'Dag', 'Naar bed', 'Ingeslapen', 'Ontwaakt', 'Opgestaan',
-    'Keer wakker', 'Min. wakker', 'Netto slaap (min)', 'Netto slaap',
+    'Keer wakker', 'Min. wakker',
+    'Netto slaap (min)', 'Netto slaap',
+    'Tijd in bed (min)', 'Tijd in bed',
+    'Slaaprendement (%)', 'Inslaaptijd (min)', 'Fragmentatie-index',
     'Kwaliteit (1-3)', 'Kwaliteit label', 'Opmerkingen'
   ];
 
   const rows = data.map(e => {
-    const { dag, full } = formatDatum(e.datum);
-    const netto = e.nettoMin != null ? e.nettoMin : '';
-    const nettoHM = e.nettoMin != null ? minNaarHM(e.nettoMin) : '';
-    const kLabel = e.kwaliteit ? KWALITEIT_LABELS[e.kwaliteit] : '';
-    // Escape velden met komma's, puntkomma's of aanhalingstekens
+    const { dag } = formatDatum(e.datum);
+    const netto    = e.nettoMin != null ? e.nettoMin : '';
+    const nettoHM  = e.nettoMin != null ? minNaarHM(e.nettoMin) : '';
+    const tib      = e.tijdInBedMin != null ? e.tijdInBedMin : '';
+    const tibHM    = e.tijdInBedMin != null ? minNaarHM(e.tijdInBedMin) : '';
+    const rend     = e.slaaprendement != null ? e.slaaprendement : '';
+    const lat      = e.slaaplatentie != null ? e.slaaplatentie : '';
+    const frag     = (e.nettoMin > 0 && e.wakkerKeer != null)
+      ? (e.wakkerKeer / (e.nettoMin/60)).toFixed(2) : '';
+    const kLabel   = e.kwaliteit ? KWALITEIT_LABELS[e.kwaliteit] : '';
     const esc = v => {
       const s = String(v ?? '');
       return (s.includes(sep) || s.includes('"') || s.includes('\n'))
-        ? '"' + s.replace(/"/g, '""') + '"'
-        : s;
+        ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
     return [
       e.datum, dag, e.naarBed, e.ingeslagen, e.ontwaakt, e.opgestaan,
-      e.wakkerKeer, e.wakkerMin, netto, nettoHM,
+      e.wakkerKeer, e.wakkerMin,
+      netto, nettoHM,
+      tib, tibHM,
+      rend, lat, frag,
       e.kwaliteit || '', kLabel, e.opmerkingen
     ].map(esc).join(sep);
   });
@@ -1228,24 +1372,24 @@ document.getElementById('datum').value = todayString();
 
 // ── PAPIEREN DAGBOEK DATA (eenmalige import) ──────────────────────
 (function importPapierenData() {
-  const IMPORT_KEY = 'papieren_import_v1';
+  const IMPORT_KEY = 'papieren_import_v2';
   if (localStorage.getItem(IMPORT_KEY)) return; // al gedaan
 
   const papier = [
-    { datum:'2025-02-13', ingeslagen:'00:45', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:60,  kwaliteit:2 },
-    { datum:'2025-02-14', ingeslagen:'00:40', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:65,  kwaliteit:1 },
-    { datum:'2025-02-15', ingeslagen:'02:20', ontwaakt:'08:20', opgestaan:'08:20', wakkerKeer:2, wakkerMin:20,  kwaliteit:1 },
-    { datum:'2025-02-16', ingeslagen:'01:55', ontwaakt:'07:65', opgestaan:'07:65', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-17', ingeslagen:'02:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:40,  kwaliteit:2 },
-    { datum:'2025-02-18', ingeslagen:'00:30', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-19', ingeslagen:'02:20', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-20', ingeslagen:'01:25', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:35,  kwaliteit:2 },
-    { datum:'2025-02-21', ingeslagen:'02:45', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:45,  kwaliteit:1 },
-    { datum:'2025-02-22', ingeslagen:'00:00', ontwaakt:'07:50', opgestaan:'07:50', wakkerKeer:2, wakkerMin:30,  kwaliteit:2 },
-    { datum:'2025-02-23', ingeslagen:'08:05', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:15,  kwaliteit:2 },
-    { datum:'2025-02-24', ingeslagen:'04:00', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:17,  kwaliteit:1 },
-    { datum:'2025-02-25', ingeslagen:'23:35', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:23,  kwaliteit:2 },
-    { datum:'2025-02-26', ingeslagen:'00:55', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:3, wakkerMin:7,   kwaliteit:1 },
+    { datum:'2025-02-14', ingeslagen:'00:45', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:60,  kwaliteit:2 },
+    { datum:'2025-02-15', ingeslagen:'00:40', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:65,  kwaliteit:1 },
+    { datum:'2025-02-16', ingeslagen:'02:20', ontwaakt:'08:20', opgestaan:'08:20', wakkerKeer:2, wakkerMin:20,  kwaliteit:1 },
+    { datum:'2025-02-17', ingeslagen:'01:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-18', ingeslagen:'02:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:40,  kwaliteit:2 },
+    { datum:'2025-02-19', ingeslagen:'00:30', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-20', ingeslagen:'02:20', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2025-02-21', ingeslagen:'01:25', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:35,  kwaliteit:2 },
+    { datum:'2025-02-22', ingeslagen:'02:45', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:45,  kwaliteit:1 },
+    { datum:'2025-02-23', ingeslagen:'00:00', ontwaakt:'07:50', opgestaan:'07:50', wakkerKeer:2, wakkerMin:30,  kwaliteit:2 },
+    { datum:'2025-02-24', ingeslagen:'08:05', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:15,  kwaliteit:2 },
+    { datum:'2025-02-25', ingeslagen:'04:00', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:17,  kwaliteit:1 },
+    { datum:'2025-02-26', ingeslagen:'23:35', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:23,  kwaliteit:2 },
+    { datum:'2025-02-27', ingeslagen:'00:55', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:3, wakkerMin:7,   kwaliteit:1 },
   ];
 
   const bestaand = getLog();
