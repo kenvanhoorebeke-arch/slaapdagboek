@@ -1864,9 +1864,26 @@ updateHeaderCount();
 // ── SERVICE WORKER REGISTRATIE ────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('✓ Service worker actief'))
-      .catch(e => console.warn('Service worker fout:', e));
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('✓ Service worker actief');
+      // Forceer update check
+      reg.update();
+      // Als er een nieuwe worker wacht, activeer hem meteen
+      reg.addEventListener('updatefound', () => {
+        const nieuw = reg.installing;
+        nieuw.addEventListener('statechange', () => {
+          if (nieuw.state === 'installed' && navigator.serviceWorker.controller) {
+            // Nieuwe versie beschikbaar — herlaad de pagina
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(e => console.warn('Service worker fout:', e));
+
+    // Als de controller verandert (nieuwe SW actief), herlaad
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
   });
 }
 
