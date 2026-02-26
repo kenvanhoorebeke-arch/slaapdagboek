@@ -534,7 +534,7 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 input[type="number"] { -moz-appearance: textfield; }
 
-/* ─── EXPORT BUTTON ─────────────────────────────────────────────── */
+/* ─── EXPORT / IMPORT BUTTONS ───────────────────────────────────── */
 .btn-export {
   display: inline-flex;
   align-items: center;
@@ -551,6 +551,125 @@ input[type="number"] { -moz-appearance: textfield; }
   transition: all 0.15s;
 }
 .btn-export:active { transform: scale(0.97); }
+.btn-import {
+  border-color: var(--purple);
+  background: var(--purple-lt);
+  color: #553c9a;
+}
+
+/* ─── MODAL ─────────────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(30,40,80,0.55);
+  z-index: 999;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal-box {
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  padding: 24px 20px 36px;
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(79,128,225,0.18);
+}
+.modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.file-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 28px 16px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  background: var(--bg);
+  transition: border-color 0.2s;
+}
+.file-drop:active { border-color: var(--purple); }
+.file-drop-icon { font-size: 32px; }
+#file-drop-label { font-size: 13px; color: var(--muted); font-weight: 600; text-align:center; }
+.btn-modal-cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border2);
+  background: var(--bg);
+  color: var(--muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-modal-ok {
+  flex: 2;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--purple) 0%, #6b46c1 100%);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ─── MAPPING TABLE ─────────────────────────────────────────────── */
+.map-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.map-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.map-select {
+  flex: 1.5;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border2);
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ─── PREVIEW LIST ──────────────────────────────────────────────── */
+.imp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.imp-row.new  { background: var(--mint-lt);   color: #276749; }
+.imp-row.dupe { background: var(--amber-lt);  color: #92400e; }
+.imp-row.err  { background: var(--rose-lt);   color: #9b2c2c; }
 
 
 
@@ -567,6 +686,7 @@ input[type="number"] { -moz-appearance: textfield; }
   <span class="header-icon">☁️</span>
   <h1>Slaapdagboek</h1>
   <p>Jouw persoonlijk slaaplogboek</p>
+  <p id="header-count" style="margin-top:8px;font-style:normal;font-size:12px;font-weight:700;letter-spacing:.06em;opacity:0.85;"></p>
 </header>
 
 <!-- ═══ TABS ══════════════════════════════════════════════════════ -->
@@ -675,10 +795,52 @@ input[type="number"] { -moz-appearance: textfield; }
 
 <!-- ═══ LOG VIEW ══════════════════════════════════════════════════ -->
 <div class="view" id="view-log">
-  <div id="log-toolbar" style="display:none; justify-content:flex-end; margin-bottom:10px;">
+  <div id="log-toolbar" style="display:none; justify-content:space-between; margin-bottom:10px; gap:8px;">
+    <button class="btn-export btn-import" onclick="openImport()">📂 Importeer CSV</button>
     <button class="btn-export" onclick="exporteerExcel()">📥 Exporteer naar Excel</button>
   </div>
   <div id="log-container"></div>
+</div>
+
+<!-- ═══ CSV IMPORT MODAL ══════════════════════════════════════════ -->
+<div class="modal-overlay" id="import-modal" onclick="sluitImport(event)">
+  <div class="modal-box">
+
+    <!-- Stap 1: Upload -->
+    <div class="import-step" id="imp-step1">
+      <div class="modal-title">📂 CSV importeren</div>
+      <p class="modal-sub">Kies een CSV-bestand om te importeren. Komma, puntkomma of tab als scheidingsteken worden automatisch herkend.</p>
+      <label class="file-drop" id="file-drop">
+        <span class="file-drop-icon">📄</span>
+        <span id="file-drop-label">Tik om bestand te kiezen</span>
+        <input type="file" accept=".csv,.txt" id="csv-file-input" onchange="laadCsv(this)" style="display:none">
+      </label>
+      <button class="btn-modal-cancel" onclick="sluitImport()">Annuleren</button>
+    </div>
+
+    <!-- Stap 2: Kolom-mapping -->
+    <div class="import-step" id="imp-step2" style="display:none">
+      <div class="modal-title">🔗 Kolomnamen koppelen</div>
+      <p class="modal-sub">Koppel de kolommen uit jouw CSV aan de velden van het dagboek. Velden zonder koppeling worden overgeslagen.</p>
+      <div id="mapping-container"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-modal-cancel" onclick="naarStap(1)">← Terug</button>
+        <button class="btn-modal-ok" onclick="naarStap(3)">Bekijk preview →</button>
+      </div>
+    </div>
+
+    <!-- Stap 3: Preview -->
+    <div class="import-step" id="imp-step3" style="display:none">
+      <div class="modal-title">👁️ Preview</div>
+      <p class="modal-sub" id="imp-preview-info"></p>
+      <div id="imp-preview-list"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-modal-cancel" onclick="naarStap(2)">← Terug</button>
+        <button class="btn-modal-ok" onclick="bevestigImport()">✓ Importeer</button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- ═══ INSIGHTS VIEW ════════════════════════════════════════════ -->
@@ -876,6 +1038,7 @@ function slaOp() {
   saveLog(data);
   showToast(editId !== null ? '✏️ Wijzigingen opgeslagen!' : '✓ Nacht opgeslagen!');
   resetForm();
+  updateHeaderCount();
 }
 
 function laadInForm(entry) {
@@ -1023,6 +1186,7 @@ function deleteEntry(id) {
   const data = getLog().filter(e => e.id !== id);
   saveLog(data);
   renderLog();
+  updateHeaderCount();
 }
 
 function escHtml(str) {
@@ -1306,6 +1470,276 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2800);
 }
 
+// ── CSV IMPORT ────────────────────────────────────────────────────
+
+// Velden die we kennen, met hun label en of ze verplicht zijn
+const IMPORT_VELDEN = [
+  { key: 'datum',      label: 'Datum',           verplicht: true  },
+  { key: 'naarBed',    label: 'Naar bed',         verplicht: false },
+  { key: 'ingeslagen', label: 'Ingeslapen',       verplicht: false },
+  { key: 'ontwaakt',   label: 'Ontwaakt',         verplicht: false },
+  { key: 'opgestaan',  label: 'Opgestaan',        verplicht: false },
+  { key: 'wakkerKeer', label: 'Keer wakker',      verplicht: false },
+  { key: 'wakkerMin',  label: 'Min. wakker',      verplicht: false },
+  { key: 'kwaliteit',  label: 'Kwaliteit (1-3)',  verplicht: false },
+  { key: 'opmerkingen',label: 'Opmerkingen',      verplicht: false },
+];
+
+let csvHeaders  = [];   // kolomnamen uit het bestand
+let csvRows     = [];   // ruwe rijen als objecten
+let importPreview = []; // verwerkte entries
+
+function openImport() {
+  document.getElementById('import-modal').classList.add('open');
+  naarStap(1);
+}
+
+function sluitImport(e) {
+  if (e && e.target !== document.getElementById('import-modal')) return;
+  document.getElementById('import-modal').classList.remove('open');
+  // Reset file input
+  document.getElementById('csv-file-input').value = '';
+  document.getElementById('file-drop-label').textContent = 'Tik om bestand te kiezen';
+}
+
+function naarStap(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('imp-step' + i).style.display = i === n ? '' : 'none';
+  });
+  if (n === 2) bouwMappingUI();
+  if (n === 3) bouwPreview();
+}
+
+// ── CSV lezen ────────────────────────────────────────────────────
+function laadCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('file-drop-label').textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const tekst = e.target.result;
+    parseerCsv(tekst);
+    naarStap(2);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseerCsv(tekst) {
+  // Detecteer scheidingsteken
+  const eersteRegel = tekst.split('\n')[0];
+  const sep = eersteRegel.includes(';') ? ';'
+            : eersteRegel.includes('\t') ? '\t'
+            : ',';
+
+  const regels = tekst.trim().split('\n').map(r => r.replace(/\r/g,''));
+
+  // Parse met respect voor aanhalingstekens
+  function parseRegel(regel) {
+    const cols = [];
+    let huidig = '';
+    let inQuote = false;
+    for (let i = 0; i < regel.length; i++) {
+      const c = regel[i];
+      if (c === '"') {
+        if (inQuote && regel[i+1] === '"') { huidig += '"'; i++; }
+        else inQuote = !inQuote;
+      } else if (c === sep && !inQuote) {
+        cols.push(huidig.trim()); huidig = '';
+      } else {
+        huidig += c;
+      }
+    }
+    cols.push(huidig.trim());
+    return cols;
+  }
+
+  csvHeaders = parseRegel(regels[0]);
+  csvRows = regels.slice(1)
+    .filter(r => r.trim())
+    .map(r => {
+      const cols = parseRegel(r);
+      const obj = {};
+      csvHeaders.forEach((h, i) => { obj[h] = cols[i] || ''; });
+      return obj;
+    });
+}
+
+// ── Mapping UI ───────────────────────────────────────────────────
+function bouwMappingUI() {
+  const container = document.getElementById('mapping-container');
+
+  // Auto-detect: zoek naar vergelijkbare kolomnamen
+  function autoMatch(veldKey, veldLabel) {
+    const zoek = [veldKey, veldLabel, ...aliassen(veldKey)]
+      .map(s => s.toLowerCase().replace(/[^a-z0-9]/g,''));
+    for (const h of csvHeaders) {
+      const hn = h.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if (zoek.some(z => hn.includes(z) || z.includes(hn))) return h;
+    }
+    return '';
+  }
+
+  container.innerHTML = IMPORT_VELDEN.map(v => `
+    <div class="map-row">
+      <div class="map-label">${v.verplicht ? '* ' : ''}${v.label}</div>
+      <select class="map-select" id="map-${v.key}">
+        <option value="">— overslaan —</option>
+        ${csvHeaders.map(h =>
+          `<option value="${h}" ${autoMatch(v.key, v.label) === h ? 'selected' : ''}>${h}</option>`
+        ).join('')}
+      </select>
+    </div>`).join('');
+}
+
+function aliassen(key) {
+  const a = {
+    datum:       ['date','dag','nacht','datum'],
+    naarBed:     ['naar bed','bedtijd','naar_bed','sleep time','bedtime'],
+    ingeslagen:  ['ingeslapen','ingeslagen','inslaaptijd','slaap','sleep onset'],
+    ontwaakt:    ['ontwaakt','wakker','woke','wake time'],
+    opgestaan:   ['opgestaan','opstaan','got up','rise'],
+    wakkerKeer:  ['keer wakker','aantal','awakenings','times awake'],
+    wakkerMin:   ['min wakker','minuten wakker','wake minutes','waso'],
+    kwaliteit:   ['kwaliteit','quality','score'],
+    opmerkingen: ['opmerkingen','notes','notities','comments'],
+  };
+  return a[key] || [];
+}
+
+// ── Preview ───────────────────────────────────────────────────────
+function bouwPreview() {
+  const mapping = {};
+  IMPORT_VELDEN.forEach(v => {
+    const sel = document.getElementById('map-' + v.key);
+    if (sel && sel.value) mapping[v.key] = sel.value;
+  });
+
+  if (!mapping.datum) {
+    alert('Je moet minstens de kolom "Datum" koppelen.');
+    naarStap(2);
+    return;
+  }
+
+  const bestaand = new Set(getLog().map(e => e.datum));
+  importPreview = [];
+
+  csvRows.forEach((rij, i) => {
+    // Datum normaliseren
+    const rawDatum = (rij[mapping.datum] || '').trim();
+    const datum = normaliseerDatum(rawDatum);
+    if (!datum) {
+      importPreview.push({ status: 'err', label: `Rij ${i+2}: datum onleesbaar (${rawDatum})` });
+      return;
+    }
+
+    const entry = {
+      id:           Date.now() + i,
+      datum,
+      naarBed:      normaliseerTijd(mapping.naarBed    ? rij[mapping.naarBed]    : ''),
+      ingeslagen:   normaliseerTijd(mapping.ingeslagen  ? rij[mapping.ingeslagen] : ''),
+      ontwaakt:     normaliseerTijd(mapping.ontwaakt    ? rij[mapping.ontwaakt]   : ''),
+      opgestaan:    normaliseerTijd(mapping.opgestaan   ? rij[mapping.opgestaan]  : ''),
+      wakkerKeer:   parseInt(mapping.wakkerKeer  ? rij[mapping.wakkerKeer]  : '') || 0,
+      wakkerMin:    parseInt(mapping.wakkerMin   ? rij[mapping.wakkerMin]   : '') || 0,
+      kwaliteit:    normaliseerKwaliteit(mapping.kwaliteit ? rij[mapping.kwaliteit] : ''),
+      opmerkingen:  mapping.opmerkingen ? rij[mapping.opmerkingen] : '',
+      bron:         'csv-import',
+    };
+
+    // Berekende velden
+    entry.nettoMin      = berekenNetto(entry.ingeslagen, entry.ontwaakt, entry.wakkerMin);
+    entry.tijdInBedMin  = berekenTijdInBed(entry.naarBed, entry.opgestaan);
+    entry.slaaplatentie = berekenSlaaplatentie(entry.naarBed, entry.ingeslagen);
+    entry.slaaprendement = (entry.nettoMin != null && entry.tijdInBedMin > 0)
+      ? Math.round(entry.nettoMin / entry.tijdInBedMin * 100) : null;
+
+    const status = bestaand.has(datum) ? 'dupe' : 'new';
+    importPreview.push({ status, entry, label: `${datum} — ${entry.ingeslagen || '?'} → ${entry.ontwaakt || '?'}` });
+  });
+
+  // Info tekst
+  const nieuw  = importPreview.filter(r => r.status === 'new').length;
+  const dupes  = importPreview.filter(r => r.status === 'dupe').length;
+  const fouten = importPreview.filter(r => r.status === 'err').length;
+  document.getElementById('imp-preview-info').textContent =
+    `${nieuw} nieuw · ${dupes} al aanwezig (worden overgeslagen) · ${fouten} onleesbaar`;
+
+  document.getElementById('imp-preview-list').innerHTML = importPreview.map(r => `
+    <div class="imp-row ${r.status}">
+      <span>${r.status === 'new' ? '✓' : r.status === 'dupe' ? '⚠️' : '✗'} ${r.label}</span>
+    </div>`).join('');
+}
+
+function bevestigImport() {
+  const nieuw = importPreview.filter(r => r.status === 'new').map(r => r.entry);
+  if (!nieuw.length) { alert('Geen nieuwe nachten om te importeren.'); return; }
+
+  const bestaand = getLog();
+  const samengevoegd = [...bestaand, ...nieuw]
+    .sort((a,b) => b.datum.localeCompare(a.datum));
+  saveLog(samengevoegd);
+  updateHeaderCount();
+
+  document.getElementById('import-modal').classList.remove('open');
+  renderLog();
+  showToast(`✓ ${nieuw.length} nachten geïmporteerd!`);
+}
+
+// ── Datum/tijd normalisering ──────────────────────────────────────
+function normaliseerDatum(s) {
+  if (!s) return null;
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY of DD-MM-YYYY
+  const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+  // MM/DD/YYYY
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m2) {
+    // Heuristiek: als dag > 12, dan moet het DD/MM zijn
+    if (parseInt(m2[1]) > 12) return `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+    return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
+  }
+  // DD/MM/YY
+  const m3 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+  if (m3) {
+    const jaar = parseInt(m3[3]) < 50 ? '20' + m3[3] : '19' + m3[3];
+    return `${jaar}-${m3[2].padStart(2,'0')}-${m3[1].padStart(2,'0')}`;
+  }
+  return null;
+}
+
+function normaliseerTijd(s) {
+  if (!s) return '';
+  s = s.trim();
+  // HH:MM of H:MM
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0,5);
+  // Decimale uren (bijv. 22.5)
+  const dec = parseFloat(s);
+  if (!isNaN(dec) && dec >= 0 && dec < 24) {
+    const h = Math.floor(dec);
+    const m = Math.round((dec - h) * 60);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function normaliseerKwaliteit(s) {
+  if (!s) return 0;
+  const n = parseInt(s);
+  if (n >= 1 && n <= 3) return n;
+  // Tekst-labels
+  const lower = s.toLowerCase();
+  if (lower.includes('slecht') || lower.includes('bad') || lower === '1') return 1;
+  if (lower.includes('matig') || lower.includes('ok')  || lower === '2') return 2;
+  if (lower.includes('goed')  || lower.includes('good')|| lower === '3') return 3;
+  // Schaal 1-5 omzetten naar 1-3
+  if (n === 4) return 2;
+  if (n === 5) return 3;
+  return 0;
+}
+
 // ── EXCEL EXPORT ──────────────────────────────────────────────────
 function exporteerExcel() {
   const data = getLog();
@@ -1370,26 +1804,33 @@ function exporteerExcel() {
 // ── INIT ──────────────────────────────────────────────────────────
 document.getElementById('datum').value = todayString();
 
+function updateHeaderCount() {
+  const n = getLog().length;
+  const el = document.getElementById('header-count');
+  if (el) el.textContent = n === 0 ? '' : `🌙 ${n} nacht${n === 1 ? '' : 'en'} gelogd`;
+}
+updateHeaderCount();
+
 // ── PAPIEREN DAGBOEK DATA (eenmalige import) ──────────────────────
 (function importPapierenData() {
-  const IMPORT_KEY = 'papieren_import_v2';
+  const IMPORT_KEY = 'papieren_import_v3';
   if (localStorage.getItem(IMPORT_KEY)) return; // al gedaan
 
   const papier = [
-    { datum:'2025-02-14', ingeslagen:'00:45', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:60,  kwaliteit:2 },
-    { datum:'2025-02-15', ingeslagen:'00:40', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:65,  kwaliteit:1 },
-    { datum:'2025-02-16', ingeslagen:'02:20', ontwaakt:'08:20', opgestaan:'08:20', wakkerKeer:2, wakkerMin:20,  kwaliteit:1 },
-    { datum:'2025-02-17', ingeslagen:'01:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-18', ingeslagen:'02:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:40,  kwaliteit:2 },
-    { datum:'2025-02-19', ingeslagen:'00:30', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-20', ingeslagen:'02:20', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
-    { datum:'2025-02-21', ingeslagen:'01:25', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:35,  kwaliteit:2 },
-    { datum:'2025-02-22', ingeslagen:'02:45', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:45,  kwaliteit:1 },
-    { datum:'2025-02-23', ingeslagen:'00:00', ontwaakt:'07:50', opgestaan:'07:50', wakkerKeer:2, wakkerMin:30,  kwaliteit:2 },
-    { datum:'2025-02-24', ingeslagen:'08:05', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:15,  kwaliteit:2 },
-    { datum:'2025-02-25', ingeslagen:'04:00', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:17,  kwaliteit:1 },
-    { datum:'2025-02-26', ingeslagen:'23:35', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:23,  kwaliteit:2 },
-    { datum:'2025-02-27', ingeslagen:'00:55', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:3, wakkerMin:7,   kwaliteit:1 },
+    { datum:'2026-02-14', ingeslagen:'00:45', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:60,  kwaliteit:2 },
+    { datum:'2026-02-15', ingeslagen:'00:40', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:65,  kwaliteit:1 },
+    { datum:'2026-02-16', ingeslagen:'02:20', ontwaakt:'08:20', opgestaan:'08:20', wakkerKeer:2, wakkerMin:20,  kwaliteit:1 },
+    { datum:'2026-02-17', ingeslagen:'01:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2026-02-18', ingeslagen:'02:55', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:1, wakkerMin:40,  kwaliteit:2 },
+    { datum:'2026-02-19', ingeslagen:'00:30', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2026-02-20', ingeslagen:'02:20', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:20,  kwaliteit:2 },
+    { datum:'2026-02-21', ingeslagen:'01:25', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:35,  kwaliteit:2 },
+    { datum:'2026-02-22', ingeslagen:'02:45', ontwaakt:'07:30', opgestaan:'07:30', wakkerKeer:2, wakkerMin:45,  kwaliteit:1 },
+    { datum:'2026-02-23', ingeslagen:'00:00', ontwaakt:'07:50', opgestaan:'07:50', wakkerKeer:2, wakkerMin:30,  kwaliteit:2 },
+    { datum:'2026-02-24', ingeslagen:'08:05', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:15,  kwaliteit:2 },
+    { datum:'2026-02-25', ingeslagen:'04:00', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:1, wakkerMin:17,  kwaliteit:1 },
+    { datum:'2026-02-26', ingeslagen:'23:35', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:2, wakkerMin:23,  kwaliteit:2 },
+    { datum:'2026-02-27', ingeslagen:'00:55', ontwaakt:'07:00', opgestaan:'07:00', wakkerKeer:3, wakkerMin:7,   kwaliteit:1 },
   ];
 
   const bestaand = getLog();
